@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reliability Demonstration Calculator</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f5f5;
+            --success-color: #4CAF50;
+            --danger-color: #f44336;
+            --text-color: #333;
+            --border-radius: 8px;
+            --shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--secondary-color);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .input-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .calculate-btn {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .add-btn {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .remove-btn {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .advanced-charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .chart-wrapper {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .chart-wrapper.wide {
+            grid-column: 1 / -1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 500;
+        }
+
+        tr:hover {
+            background-color: rgba(74, 144, 226, 0.05);
+        }
+
+        .failure-mode {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .results {
+            margin-top: 2rem;
+            padding: 2rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .help-text {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 4px;
+        }
+        
+        input:placeholder-shown + .help-text {
+            color: var(--primary-color);
+        }
+
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--secondary-color);
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loader-text {
+            margin-top: 1rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Reliability Demonstration Calculator</h1>
+        
+        <div class="input-section">
+            <div>
+                <h2>Test Parameters</h2>
+                <div class="input-group">
+                    <label for="missionTime">Mission Time (hours) - Optional</label>
+                    <input type="number" id="missionTime" placeholder="Leave empty to calculate automatically">
+                    <small class="help-text">If left empty, will be calculated from nominal theta and R_u</small>
+                </div>
+                <div class="input-group">
+                    <label for="testVoltage">Test Voltage (V)</label>
+                    <input type="number" id="testVoltage" value="7">
+                </div>
+                <div class="input-group">
+                    <label for="nominalVoltage">Nominal Voltage (V)</label>
+                    <input type="number" id="nominalVoltage" value="5">
+                </div>
+            </div>
+
+            <div>
+                <h2>Reliability Parameters</h2>
+                <div class="input-group">
+                    <label for="Rl">Lower Reliability Bound (R_l)</label>
+                    <input type="number" id="Rl" value="0.92" step="0.01" min="0" max="1">
+                </div>
+                <div class="input-group">
+                    <label for="Ru">Upper Reliability Bound (R_u)</label>
+                    <input type="number" id="Ru" value="0.97" step="0.01" min="0" max="1">
+                </div>
+                <div class="input-group">
+                    <label for="alpha">Consumer Risk (α)</label>
+                    <input type="number" id="alpha" value="0.05" step="0.01" min="0" max="1">
+                </div>
+                <div class="input-group">
+                    <label for="beta">Producer Risk (β)</label>
+                    <input type="number" id="beta" value="0.10" step="0.01" min="0" max="1">
+                </div>
+            </div>
+
+            <div>
+                <h2>Failure Modes</h2>
+                <div id="failureModes">
+                    <div class="failure-mode" id="mode-0">
+                        <h3>Failure Mode 1</h3>
+                        <div class="input-group">
+                            <label for="mode-0-name">Name</label>
+                            <input type="text" id="mode-0-name" value="Flash Memory">
+                        </div>
+                        <div class="input-group">
+                            <label for="mode-0-shape">Weibull Shape Parameter (β)</label>
+                            <input type="number" id="mode-0-shape" value="1.796667" step="0.000001">
+                        </div>
+                        <div class="input-group">
+                            <label for="mode-0-nominal">Nominal Life (hours)</label>
+                            <input type="number" id="mode-0-nominal" value="50000">
+                        </div>
+                        <div class="input-group">
+                            <label for="mode-0-af">Acceleration Factor</label>
+                            <input type="number" id="mode-0-af" value="84.89655568">
+                        </div>
+                        <button onclick="removeFailureMode(0)" class="remove-btn">Remove</button>
+                    </div>
+                </div>
+                <button onclick="addFailureMode()" class="add-btn">Add Failure Mode</button>
+            </div>
+
+            <div class="input-group">
+                <label for="numIterations">Number of Simulation Iterations</label>
+                <input type="number" id="numIterations" value="10000" min="1000" max="100000" step="1000">
+                <small class="help-text">Higher values give more accurate results but take longer (1000-100000)</small>
+            </div>
+        </div>
+
+        <button onclick="calculateReliability()">Calculate</button>
+
+        <div id="results" class="results">
+            <h2>Results</h2>
+            <div id="resultsContent"></div>
+            
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <canvas id="simulationChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="reliabilityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loader" class="loader-container" style="display: none;">
+        <div class="loader"></div>
+        <div class="loader-text">Calculating...</div>
+    </div>
+
+    <script>
+        let failureModeCount = 1;
+        let simulationChart = null;
+        let reliabilityChart = null;
+
+        function addFailureMode() {
+            const container = document.getElementById('failureModes');
+            const newMode = document.createElement('div');
+            const modeId = failureModeCount++;
+            
+            newMode.className = 'failure-mode';
+            newMode.id = `mode-${modeId}`;
+            newMode.innerHTML = `
+                <h3>Failure Mode ${failureModeCount}</h3>
+                <div class="input-group">
+                    <label for="mode-${modeId}-name">Name</label>
+                    <input type="text" id="mode-${modeId}-name" value="New Mode">
+                </div>
+                <div class="input-group">
+                    <label for="mode-${modeId}-shape">Weibull Shape Parameter (β)</label>
+                    <input type="number" id="mode-${modeId}-shape" value="2.0" step="0.000001">
+                </div>
+                <div class="input-group">
+                    <label for="mode-${modeId}-nominal">Nominal Life (hours)</label>
+                    <input type="number" id="mode-${modeId}-nominal" value="50000">
+                </div>
+                <div class="input-group">
+                    <label for="mode-${modeId}-af">Acceleration Factor</label>
+                    <input type="number" id="mode-${modeId}-af" value="50.0">
+                </div>
+                <button onclick="removeFailureMode(${modeId})" class="remove-btn">Remove</button>
+            `;
+            container.appendChild(newMode);
+        }
+
+        function removeFailureMode(modeId) {
+            if (document.getElementsByClassName('failure-mode').length > 1) {
+                document.getElementById(`mode-${modeId}`).remove();
+            } else {
+                alert('At least one failure mode is required');
+            }
+        }
+
+        function getFailureModes() {
+            const modes = [];
+            const modeElements = document.getElementsByClassName('failure-mode');
+            
+            for (const element of modeElements) {
+                const id = element.id.split('-')[1];
+                modes.push({
+                    name: document.getElementById(`mode-${id}-name`).value,
+                    shape: parseFloat(document.getElementById(`mode-${id}-shape`).value),
+                    nominal: parseFloat(document.getElementById(`mode-${id}-nominal`).value),
+                    af: parseFloat(document.getElementById(`mode-${id}-af`).value)
+                });
+            }
+            return modes;
+        }
+
+        function solveForReliabilities(R_target, betas) {
+            // Implementation of numerical solver for multiple failure modes
+            function equations(vars) {
+                // Product of reliabilities equals target
+                let eq1 = vars.reduce((a, b) => a * b, 1) - R_target;
+                
+                // Time references should be equal
+                let t_refs = vars.map((R, i) => Math.pow(-Math.log(R), 1/betas[i]));
+                let timeEqs = t_refs.slice(1).map(t => t - t_refs[0]);
+                
+                return [eq1, ...timeEqs];
+            }
+
+            // Simple numerical solver using Newton's method
+            let vars = Array(betas.length).fill(Math.pow(R_target, 1/betas.length));
+            let maxIter = 100;
+            let tolerance = 1e-6;
+
+            for (let iter = 0; iter < maxIter; iter++) {
+                let eqs = equations(vars);
+                if (Math.max(...eqs.map(Math.abs)) < tolerance) {
+                    break;
+                }
+
+                // Update variables using numerical derivatives
+                const h = 1e-6;
+                for (let i = 0; i < vars.length; i++) {
+                    let varsPlus = [...vars];
+                    varsPlus[i] += h;
+                    let eqsPlus = equations(varsPlus);
+                    
+                    let derivative = eqsPlus.map((eq, j) => (eq - eqs[j]) / h);
+                    vars[i] -= eqs[i] / derivative[i];
+                }
+            }
+
+            return vars;
+        }
+
+        function calculateNominalMissionTime(modes, Ru) {
+            // For multiple failure modes, we need to solve:
+            // exp(-(t/θ1)^β1) * exp(-(t/θ2)^β2) = Ru
+            // or: (t/θ1)^β1 + (t/θ2)^β2 = -ln(Ru)
+
+            function systemReliability(time) {
+                let reliability = 1.0;
+                modes.forEach(mode => {
+                    const theta = mode.nominal;
+                    const beta = mode.shape;
+                    reliability *= Math.exp(-Math.pow(time/theta, beta));
+                });
+                return reliability;
+            }
+
+            function objectiveFunction(time) {
+                return Math.abs(systemReliability(time) - Ru);
+            }
+
+            // Binary search for the mission time
+            let timeMin = 0;
+            let timeMax = Math.min(...modes.map(mode => mode.nominal)) * 2; // Start with reasonable upper bound
+            let bestTime = timeMin;
+            let bestDiff = Math.abs(systemReliability(bestTime) - Ru);
+            
+            const maxIterations = 100;
+            const tolerance = 1e-6;
+            
+            for (let i = 0; i < maxIterations; i++) {
+                const timeMid = (timeMin + timeMax) / 2;
+                const reliabilityMid = systemReliability(timeMid);
+                
+                if (Math.abs(reliabilityMid - Ru) < tolerance) {
+                    bestTime = timeMid;
+                    break;
+                }
+                
+                if (reliabilityMid > Ru) {
+                    timeMin = timeMid;
+                } else {
+                    timeMax = timeMid;
+                }
+                
+                const currentDiff = Math.abs(reliabilityMid - Ru);
+                if (currentDiff < bestDiff) {
+                    bestTime = timeMid;
+                    bestDiff = currentDiff;
+                }
+            }
+
+            // Calculate both nominal and accelerated times for each mode
+            const modeResults = modes.map(mode => {
+                const reliability = Math.exp(-Math.pow(bestTime/mode.nominal, mode.shape));
+                const acceleratedTime = bestTime / mode.af;  // Calculate accelerated time
+                return {
+                    name: mode.name,
+                    nominalTime: bestTime,
+                    acceleratedTime: acceleratedTime,
+                    reliability: reliability,
+                    af: mode.af
+                };
+            });
+
+            // Enhanced details output
+            let details = `
+                <h4>Mission Time Calculation Details:</h4>
+                <p>Target System Reliability (R_u): ${Ru}</p>
+                <p>Calculated Nominal Mission Time: ${bestTime.toFixed(2)} hours</p>
+                <p>Achieved System Reliability: ${systemReliability(bestTime).toFixed(6)}</p>
+                <table>
+                    <tr>
+                        <th>Failure Mode</th>
+                        <th>Individual Reliability</th>
+                        <th>Nominal Time (hours)</th>
+                        <th>Acceleration Factor</th>
+                        <th>Accelerated Time (hours)</th>
+                    </tr>
+                    ${modeResults.map(mode => `
+                        <tr>
+                            <td>${mode.name}</td>
+                            <td>${mode.reliability.toFixed(6)}</td>
+                            <td>${mode.nominalTime.toFixed(2)}</td>
+                            <td>${mode.af.toFixed(2)}</td>
+                            <td>${mode.acceleratedTime.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                    <tr>
+                        <td><strong>System</strong></td>
+                        <td><strong>${Ru}</strong></td>
+                        <td><strong>${bestTime.toFixed(2)}</strong></td>
+                        <td>-</td>
+                        <td><strong>${Math.min(...modeResults.map(m => m.acceleratedTime)).toFixed(2)}</strong></td>
+                    </tr>
+                </table>
+            `;
+
+            return {
+                systemTime: bestTime,
+                modeResults: modeResults,
+                details: details
+            };
+        }
+
+        async function calculateReliability() {
+            // Show loader
+            document.getElementById('loader').style.display = 'flex';
+            
+            // Get number of iterations
+            const numIterations = parseInt(document.getElementById('numIterations').value);
+            
+            try {
+                // Wrap the calculation in a Promise to allow for the loader to render
+                await new Promise(resolve => setTimeout(resolve, 0));
+                
+                const failureModes = getFailureModes();
+                const Ru = parseFloat(document.getElementById('Ru').value);
+                let missionTime = parseFloat(document.getElementById('missionTime').value);
+                
+                let results = '';
+                
+                // Calculate mission time if not provided
+                if (isNaN(missionTime)) {
+                    const timeCalculation = calculateNominalMissionTime(failureModes, Ru);
+                    missionTime = timeCalculation.systemTime;
+                    
+                    results += `
+                        <h3>Mission Time Calculation</h3>
+                        <table>
+                            <tr>
+                                <th>Failure Mode</th>
+                                <th>Calculated Time (hours)</th>
+                            </tr>
+                            ${timeCalculation.modeResults.map(mode => `
+                                <tr>
+                                    <td>${mode.name}</td>
+                                    <td>${mode.nominalTime.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                            <tr>
+                                <td><strong>System Mission Time</strong></td>
+                                <td><strong>${missionTime.toFixed(2)}</strong></td>
+                            </tr>
+                        </table>
+                    `;
+                }
+
+                // Update mission time input
+                document.getElementById('missionTime').value = missionTime;
+                
+                const Rl = parseFloat(document.getElementById('Rl').value);
+                const alpha = parseFloat(document.getElementById('alpha').value);
+                const beta = parseFloat(document.getElementById('beta').value);
+
+                // Modified simulation function to use custom iteration count
+                function runSimulationWithIterations(N, r, R) {
+                    return runSimulation(N, r, R, numIterations);
+                }
+
+                if (failureModes.length === 1) {
+                    const mode = failureModes[0];
+                    const acceleratedTime = missionTime / mode.af;
+                    const thetaL = calculateTheta(Rl, mode.shape, acceleratedTime);
+                    const thetaU = calculateTheta(Ru, mode.shape, acceleratedTime);
+                    
+                    results += generateSingleModeResults(mode, acceleratedTime, thetaL, thetaU);
+                } else {
+                    const betas = failureModes.map(mode => mode.shape);
+                    const reliabilitiesL = solveForReliabilities(Rl, betas);
+                    const reliabilitiesU = solveForReliabilities(Ru, betas);
+                    
+                    results += generateMultiModeResults(failureModes, reliabilitiesL, reliabilitiesU);
+                }
+
+                const testPlan = calculateNRParameters(alpha, beta, Rl, Ru);
+                
+                results += generateTestPlanResults(testPlan);
+                results += generateSimulationResults(testPlan, Rl, Ru, runSimulationWithIterations);
+                
+                document.getElementById('resultsContent').innerHTML = results;
+
+                // Clear and recreate charts container
+                const resultsDiv = document.getElementById('results');
+                const oldChartsContainer = document.querySelector('.charts-container');
+                if (oldChartsContainer) {
+                    oldChartsContainer.remove();
+                }
+
+                const chartsContainer = document.createElement('div');
+                chartsContainer.className = 'charts-container';
+                chartsContainer.innerHTML = `
+                    <div class="chart-wrapper">
+                        <canvas id="simulationChart"></canvas>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="reliabilityChart"></canvas>
+                    </div>
+                `;
+                resultsDiv.appendChild(chartsContainer);
+
+                // Update charts with new iteration count
+                updateCharts(testPlan, Rl, Ru, numIterations);
+            } catch (error) {
+                console.error('Calculation error:', error);
+                document.getElementById('resultsContent').innerHTML = `
+                    <div class="error">
+                        An error occurred during calculation. Please check your inputs and try again.
+                    </div>
+                `;
+            } finally {
+                // Hide loader
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        function generateSingleModeResults(mode, acceleratedTime, thetaL, thetaU) {
+            return `
+                <h3>Single Failure Mode Results</h3>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                    <tr>
+                        <td>Mode Name</td>
+                        <td>${mode.name}</td>
+                    </tr>
+                    <tr>
+                        <td>Nominal Mission Time</td>
+                        <td>${(acceleratedTime * mode.af).toFixed(2)} hours</td>
+                    </tr>
+                    <tr>
+                        <td>Acceleration Factor</td>
+                        <td>${mode.af.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Accelerated Test Time</td>
+                        <td>${acceleratedTime.toFixed(2)} hours</td>
+                    </tr>
+                    <tr>
+                        <td>Theta (R_l)</td>
+                        <td>${thetaL.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Theta (R_u)</td>
+                        <td>${thetaU.toFixed(2)}</td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function generateMultiModeResults(modes, reliabilitiesL, reliabilitiesU) {
+            const missionTime = parseFloat(document.getElementById('missionTime').value);
+            
+            // Calculate thetas using the accelerated mission time
+            const thetasL = modes.map((mode, i) => {
+                const acceleratedTime = missionTime / mode.af;  // Convert to accelerated time
+                // θ = T_accelerated / (-ln(R))^(1/β)
+                return acceleratedTime / Math.pow(-Math.log(reliabilitiesL[i]), 1/mode.shape);
+            });
+            
+            const thetasU = modes.map((mode, i) => {
+                const acceleratedTime = missionTime / mode.af;
+                return acceleratedTime / Math.pow(-Math.log(reliabilitiesU[i]), 1/mode.shape);
+            });
+
+            let html = `
+                <h3>Multiple Failure Modes Results</h3>
+                <table>
+                    <tr>
+                        <th>Failure Mode</th>
+                        <th>R_l Individual</th>
+                        <th>R_u Individual</th>
+                        <th>Theta (R_l)</th>
+                        <th>Theta (R_u)</th>
+                    </tr>
+            `;
+
+            modes.forEach((mode, i) => {
+                html += `
+                    <tr>
+                        <td>${mode.name}</td>
+                        <td>${reliabilitiesL[i].toFixed(4)}</td>
+                        <td>${reliabilitiesU[i].toFixed(4)}</td>
+                        <td>${thetasL[i].toFixed(2)}</td>
+                        <td>${thetasU[i].toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</table>';
+            return html;
+        }
+
+        function generateTestPlanResults(testPlan) {
+            return `
+                <h3>Test Plan Parameters</h3>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                    <tr>
+                        <td>Required Sample Size (N)</td>
+                        <td>${testPlan.N}</td>
+                    </tr>
+                    <tr>
+                        <td>Acceptance Number (r)</td>
+                        <td>${testPlan.r}</td>
+                    </tr>
+                    <tr>
+                        <td>Actual Consumer Risk (α)</td>
+                        <td>${testPlan.actualAlpha.toFixed(4)}</td>
+                    </tr>
+                    <tr>
+                        <td>Actual Producer Risk (β)</td>
+                        <td>${testPlan.actualBeta.toFixed(4)}</td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function runSimulation(N, r, R, numTrials = 10000) {
+            let accepted = 0;
+            let rejected = 0;
+            let totalFailures = 0;
+            let failureDistribution = new Array(N + 1).fill(0);
+
+            for (let trial = 0; trial < numTrials; trial++) {
+                let failures = 0;
+                for (let i = 0; i < N; i++) {
+                    if (Math.random() > R) {
+                        failures++;
+                    }
+                }
+                failureDistribution[failures]++;
+                totalFailures += failures;
+                if (failures <= r) {
+                    accepted++;
+                } else {
+                    rejected++;
+                }
+            }
+
+            return {
+                accepted,
+                rejected,
+                acceptanceRate: accepted / numTrials,
+                averageFailures: totalFailures / numTrials,
+                failureDistribution
+            };
+        }
+
+        function generateSimulationResults(testPlan, Rl, Ru, runSimulationFunc) {
+            const simLow = runSimulationFunc(testPlan.N, testPlan.r, Rl);
+            const simHigh = runSimulationFunc(testPlan.N, testPlan.r, Ru);
+
+            return `
+                <h3>Simulation Results</h3>
+                <table>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>At R_l (${Rl})</th>
+                        <th>At R_u (${Ru})</th>
+                    </tr>
+                    <tr>
+                        <td>Acceptance Rate</td>
+                        <td>${(simLow.acceptanceRate * 100).toFixed(2)}%</td>
+                        <td>${(simHigh.acceptanceRate * 100).toFixed(2)}%</td>
+                    </tr>
+                    <tr>
+                        <td>Average Failures</td>
+                        <td>${simLow.averageFailures.toFixed(2)}</td>
+                        <td>${simHigh.averageFailures.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Accepted Tests</td>
+                        <td>${simLow.accepted}</td>
+                        <td>${simHigh.accepted}</td>
+                    </tr>
+                    <tr>
+                        <td>Rejected Tests</td>
+                        <td>${simLow.rejected}</td>
+                        <td>${simHigh.rejected}</td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function updateCharts(testPlan, Rl, Ru, numIterations) {
+            if (simulationChart) {
+                simulationChart.destroy();
+            }
+            if (reliabilityChart) {
+                reliabilityChart.destroy();
+            }
+
+            const simLow = runSimulation(testPlan.N, testPlan.r, Rl, numIterations);
+            const simHigh = runSimulation(testPlan.N, testPlan.r, Ru, numIterations);
+
+            // Simulation results chart
+            const simCtx = document.getElementById('simulationChart').getContext('2d');
+            simulationChart = new Chart(simCtx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: testPlan.N + 1}, (_, i) => i),
+                    datasets: [{
+                        label: `Failures Distribution at R_l (${Rl})`,
+                        data: simLow.failureDistribution,
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    }, {
+                        label: `Failures Distribution at R_u (${Ru})`,
+                        data: simHigh.failureDistribution,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Failure Distribution in Simulation'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Number of Failures'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Reliability curve chart
+            const relCtx = document.getElementById('reliabilityChart').getContext('2d');
+            const reliabilities = Array.from({length: 101}, (_, i) => i / 100);
+            const acceptanceRates = reliabilities.map(R => 
+                runSimulation(testPlan.N, testPlan.r, R, numIterations).acceptanceRate
+            );
+
+            reliabilityChart = new Chart(relCtx, {
+                type: 'line',
+                data: {
+                    labels: reliabilities.map(r => r.toFixed(2)),
+                    datasets: [{
+                        label: 'Operating Characteristic Curve',
+                        data: acceptanceRates,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Operating Characteristic Curve'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'True Reliability'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Probability of Acceptance'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Numerical methods helper functions
+        function combination(n, r) {
+            if (r > n) return 0;
+            if (r === 0) return 1;
+            if (r === n) return 1;
+            if (r > n - r) r = n - r;
+            let ans = 1;
+            for (let i = 1; i <= r; i++) {
+                ans *= (n - r + i) / i;
+            }
+            return ans;
+        }
+
+        function calculateNRParameters(alpha, beta, Rl, Ru, maxN = 200, minN = 10) {
+            let bestN = minN;
+            let bestR = 0;
+            let minDeviation = Infinity;
+            let bestAlpha = 0;
+            let bestBeta = 0;
+
+            function calculateActualRisks(N, r) {
+                // Calculate actual beta (producer risk)
+                let actualBeta = 0;
+                for (let i = 0; i <= r; i++) {
+                    actualBeta += combination(N, i) * Math.pow(1 - Rl, i) * Math.pow(Rl, N - i);
+                }
+
+                // Calculate actual alpha (consumer risk)
+                let actualAlpha = 1;
+                for (let i = 0; i <= r; i++) {
+                    actualAlpha -= combination(N, i) * Math.pow(1 - Ru, i) * Math.pow(Ru, N - i);
+                }
+
+                return [actualAlpha, actualBeta];
+            }
+
+            // Try different values of N
+            for (let N = minN; N <= maxN; N++) {
+                const maxR = Math.min(N, Math.floor(N * 0.5));
+
+                // Try different values of r for this N
+                for (let r = 0; r <= maxR; r++) {
+                    const [actualAlpha, actualBeta] = calculateActualRisks(N, r);
+                    const deviation = Math.abs(actualAlpha - alpha) + Math.abs(actualBeta - beta);
+
+                    if (deviation < minDeviation) {
+                        minDeviation = deviation;
+                        bestN = N;
+                        bestR = r;
+                        bestAlpha = actualAlpha;
+                        bestBeta = actualBeta;
+                    }
+                }
+            }
+
+            return {
+                N: bestN,
+                r: bestR,
+                actualAlpha: bestAlpha,
+                actualBeta: bestBeta,
+                deviation: minDeviation
+            };
+        }
+
+        function calculateTheta(R, beta, time) {
+            return time / Math.pow(-Math.log(R), 1/beta);
+        }
+
+        // Add new visualization functions
+        function createHistogram(data, binCount = 30) {
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const binWidth = (max - min) / binCount;
+            const bins = new Array(binCount).fill(0);
+            
+            data.forEach(value => {
+                const binIndex = Math.min(Math.floor((value - min) / binWidth), binCount - 1);
+                bins[binIndex]++;
+            });
+            
+            return {
+                bins,
+                binEdges: Array.from({length: binCount + 1}, (_, i) => min + i * binWidth)
+            };
+        }
+
+        function updateVisualizationsForMultipleFailureModes(modes, reliabilitiesL, reliabilitiesU) {
+            // Create container for new charts
+            const chartsContainer = document.createElement('div');
+            chartsContainer.className = 'advanced-charts-container';
+            chartsContainer.innerHTML = `
+                <div class="chart-wrapper">
+                    <canvas id="reliabilityDistributionChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="thetaComparisonChart"></canvas>
+                </div>
+                <div class="chart-wrapper wide">
+                    <canvas id="timeToFailureChart"></canvas>
+                </div>
+            `;
+            
+            document.getElementById('results').appendChild(chartsContainer);
+
+            // Reliability Distribution Chart
+            new Chart(document.getElementById('reliabilityDistributionChart'), {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'R_l Distribution',
+                        data: reliabilitiesL.map((r, i) => ({x: i, y: r})),
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)'
+                    }, {
+                        label: 'R_u Distribution',
+                        data: reliabilitiesU.map((r, i) => ({x: i, y: r})),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Reliability Distribution by Failure Mode'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 1
+                        }
+                    }
+                }
+            });
+
+            // Add more visualizations...
+        }
+    </script>
+</body>
+</html> 
